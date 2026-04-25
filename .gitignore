@@ -1,0 +1,8 @@
+# Only track the Highlander project folder
+*
+!.gitignore
+!tag-game/
+!tag-game/Highlander/
+!tag-game/Highlander/**
+tag-game/Highlander/node_modules/
+tag-game/Highlander/dist/
