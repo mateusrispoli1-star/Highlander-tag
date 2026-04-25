@@ -111,7 +111,12 @@ class GameManager {
       'tagImmunity', 'headStart', 'locationAccuracy',
     ];
     for (const key of allowed) {
-      if (key in partial) room.settings[key] = partial[key];
+      if (!(key in partial)) continue;
+      if (key === 'numHunters') {
+        room.settings.numHunters = Math.max(1, Math.floor(Number(partial.numHunters) || 1));
+      } else {
+        room.settings[key] = partial[key];
+      }
     }
     return { settings: room.settings };
   }
@@ -168,6 +173,10 @@ class GameManager {
     const player = room.players.get(playerId);
     if (!player) return null;
 
+    if (typeof position.lat !== 'number' || typeof position.lng !== 'number' ||
+        position.lat < -90 || position.lat > 90 ||
+        position.lng < -180 || position.lng > 180) return null;
+
     player.position = position;
     player.isOutOfBounds =
       room.settings.boundary != null
@@ -185,8 +194,7 @@ class GameManager {
     const runner = room.players.get(runnerId);
     const hunter = room.players.get(hunterId);
 
-    if (!runner || runner.role !== 'hunter' && runner.role !== 'runner')
-      return { error: 'Invalid player state' };
+    if (!runner) return { error: 'Invalid player state' };
     if (runner.role !== 'runner') return { error: 'You are not a runner' };
     if (runner.isFrozen) return { error: 'You are already frozen' };
     if (!hunter || hunter.role !== 'hunter') return { error: 'That player is not a hunter' };
@@ -266,6 +274,7 @@ class GameManager {
     if (!room) return null;
     this._clearTimer(room);
     room.state = 'ended';
+    this.rooms.delete(roomCode);
     return { winners, reason };
   }
 

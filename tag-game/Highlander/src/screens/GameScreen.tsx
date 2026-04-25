@@ -245,7 +245,9 @@ export default function GameScreen({ route, navigation }: Props) {
 
   const endGame = () => {
     if (window.confirm(t('endGameConfirm'))) {
-      socket.emit('end-game', {}, () => {});
+      socket.emit('end-game', {}, ({ error }: any) => {
+        if (error) showToast(error);
+      });
     }
   };
 

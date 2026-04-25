@@ -12,6 +12,8 @@ const gm = new GameManager();
 
 // socketId -> roomCode
 const playerRoom = new Map();
+// socketId -> last position update timestamp for rate-limiting (max 10/sec)
+const positionLastSent = new Map();
 
 io.on('connection', (socket) => {
   console.log('[+]', socket.id);
@@ -19,6 +21,7 @@ io.on('connection', (socket) => {
   // ── Lobby ──────────────────────────────────────────────────────────────────
 
   socket.on('create-room', ({ name }, cb) => {
+    if (playerRoom.has(socket.id)) return cb?.({ error: 'Already in a room' });
     const room = gm.createRoom(socket.id, name);
     socket.join(room.code);
     playerRoom.set(socket.id, room.code);
@@ -26,6 +29,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join-room', ({ code, name }, cb) => {
+    if (playerRoom.has(socket.id)) return cb?.({ error: 'Already in a room' });
     const result = gm.joinRoom(code, socket.id, name);
     if (result.error) return cb({ error: result.error });
     socket.join(code);
@@ -80,6 +84,7 @@ io.on('connection', (socket) => {
     }
 
     gm.scheduleTimeLimit(code, (outcome) => {
+      gm.endGame(code, outcome.winners, outcome.reason);
       io.to(code).emit('game-over', outcome);
     });
 
@@ -89,6 +94,9 @@ io.on('connection', (socket) => {
   // ── In-game ────────────────────────────────────────────────────────────────
 
   socket.on('update-position', ({ lat, lng }) => {
+    const now = Date.now();
+    if (now - (positionLastSent.get(socket.id) ?? 0) < 100) return;
+    positionLastSent.set(socket.id, now);
     const code = playerRoom.get(socket.id);
     if (!code) return;
 
@@ -169,6 +177,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('[-]', socket.id);
+    positionLastSent.delete(socket.id);
     const code = playerRoom.get(socket.id);
     if (!code) return;
     playerRoom.delete(socket.id);
