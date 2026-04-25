@@ -6,3 +6,4 @@
 !tag-game/Highlander/**
 tag-game/Highlander/node_modules/
 tag-game/Highlander/dist/
+tag-game/Highlander/server/node_modules/
